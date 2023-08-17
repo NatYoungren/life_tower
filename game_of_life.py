@@ -22,11 +22,6 @@ class GameOfLife():
     
     def get_neighbors(self, i: int, j: int, radius=1):
         # num_neighbors = 0
-        num_neighbors = np.sum(self.state[max(0, i - radius):i + radius + 1, max(0, j - radius):j + radius + 1]) - self.state[i, j]
-        #  X . .
-        #  . . .
-        #  . X X
-
         # for k in range(-radius, 1 + radius):
         #     for l in range(-radius, 1 + radius):
         #         if k == 0 and l == 0:
@@ -37,15 +32,32 @@ class GameOfLife():
         #             continue
         #         elif self.state[i + k, j + l]:
         #             num_neighbors += 1
-                    
+        
+        num_neighbors = np.sum(self.state[max(0, i - radius):i + radius + 1, max(0, j - radius):j + radius + 1]) - self.state[i, j]
         return num_neighbors
     
-    def step(self):
+    def slow_step(self):
         new_state = np.zeros((self.height, self.width), dtype=np.bool_)
         for i in range(self.height):
             for j in range(self.width):
                 new_state[i, j] = self.rules[self.state[i,j]].get(self.get_neighbors(i, j, self.radius), False)
         self.state = new_state
+    
+    def gen_neighbor_map(self):
+        neighbor_map = np.zeros((self.height, self.width), dtype=np.uint8)
+
+        for i in range(self.height):
+            for j in range(self.width):
+                if self.state[i, j]:
+                    neighbor_map[max(0, i - self.radius):i + self.radius + 1, max(0, j - self.radius):j + self.radius + 1] += 1
+        return neighbor_map
+    
+    def step(self):
+        nm = self.gen_neighbor_map()
+        for i in range(self.height):
+            for j in range(self.width):
+                self.state[i, j] = self.rules[self.state[i, j]].get(nm[i, j] - self.state[i, j], False)
+
     
     def __repr__(self):
         board = ''
