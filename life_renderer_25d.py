@@ -10,12 +10,13 @@ CELL_COLOR = (180, 240, 50)
 AGED_COLOR = (70, 50, 50)
 BG_COLOR = (190, 210, 240)
 BOARD_COLOR = [min(255, int(c*2)) for c in BG_COLOR]
-OFFSET_X, OFFSET_Y = 2, 1
+OFFSET_X, OFFSET_Y = 0, 0
+CENTER_OFFSET = (-0.05, -0.05)
 
 # SIMULATION SETTINGS
 MANUAL_CONTROL = False
 BOARD_W, BOARD_H = 160, 90
-STORED_STATES = 15
+STORED_STATES = 10
 TICK_MAX = 15
 
 # CELL CALCULATIONS
@@ -24,6 +25,7 @@ CELL_H = SCREEN_H / BOARD_H
 if SQUARE_CELLS: CELL_W = CELL_H = min(CELL_W, CELL_H)
 ORIGIN_X = (SCREEN_W - CELL_W * BOARD_W) / 2
 ORIGIN_Y = (SCREEN_H - CELL_H * BOARD_H) / 2
+CENTER = (ORIGIN_X + CELL_W * BOARD_W / 2, ORIGIN_Y + CELL_H * BOARD_H / 2)
 STATE_STORE = np.zeros((STORED_STATES, BOARD_H, BOARD_W), dtype=np.bool_)
 COLOR_INTERP = np.array([np.linspace(c1, c2, STORED_STATES, dtype=np.int_) for c1, c2 in zip(CELL_COLOR, AGED_COLOR)]).T
 
@@ -53,11 +55,23 @@ def main():
     tick_count = 0
     
     # Draw a state on the screen with a given color and offset
-    def draw_state(surface, state, color, offset=(0, 0)):
+    def draw_state(surface, state, color, offset=(0, 0), center_offset=(0, 0)):
         for i in range(BOARD_H):
             for j in range(BOARD_W):
                 if state[i, j]:
-                    pg.draw.rect(surface, color, (ORIGIN_X + CELL_W * j + offset[0], ORIGIN_Y + CELL_H * i + offset[1], CELL_W, CELL_H), 0)
+                    
+                    # Calculate the position of the cell (top left corner)
+                    x, y = ORIGIN_X + CELL_W * j, ORIGIN_Y + CELL_H * i
+                    
+                    # Calculate the offset, (optionally based on a vector from the center of the board to the center of the cell)
+                    if any(center_offset):
+                        x_diff, y_diff = (x + CELL_W/2) - CENTER[0], (y + CELL_H/2) - CENTER[1]                        
+                        x_diff, y_diff =  offset[0] + (x_diff * center_offset[0] / BOARD_W*CELL_W),  offset[1] + (y_diff * center_offset[1] / BOARD_H*CELL_H)
+                    else:
+                        x_diff, y_diff = offset[0], offset[1]
+                        
+                    # Draw the cell
+                    pg.draw.rect(surface, color, (x + x_diff, y + y_diff, CELL_W, CELL_H), 0)
     
     # Update the screen with all the stored states
     def update_screen():
@@ -67,7 +81,8 @@ def main():
         # Draw stored states
         for i in range(STORED_STATES-1, -1, -1):
             offset = (OFFSET_X * i, OFFSET_Y * i)
-            draw_state(screen, STATE_STORE[i], COLOR_INTERP[i], offset)
+            center_offset = (CENTER_OFFSET[0] * i, CENTER_OFFSET[1] * i)
+            draw_state(screen, STATE_STORE[i], COLOR_INTERP[i], offset, center_offset)
             
         # Draw borders
         pg.draw.rect(screen, BG_COLOR, (0, 0, ORIGIN_X, SCREEN_H), 0)
