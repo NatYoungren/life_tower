@@ -30,10 +30,10 @@ def main():
     #     pg.draw.circle(screen, (255, 255, 255), (int(v[0]*SCREEN_W/4), int(v[1]*SCREEN_W/4)), 1)
     
     camera = np.array([13, 0.5, 2, 3.3, 0])
-    
+    z_order = np.empty(len(obj_reader.faces))
+
     while running:
         surf.fill((50, 127, 200))
-
 
 
         for event in pg.event.get():
@@ -46,14 +46,25 @@ def main():
                     print('space pressed')
         
         pixel_coords = project_points(obj_reader.vertices, camera)
-        for i, v_is in enumerate(obj_reader.faces):
+        sort_faces(obj_reader.vertices, obj_reader.faces, camera, z_order)
+
+        for i in np.argsort(z_order):
+            v_is = obj_reader.faces[i]
             triangle = [pixel_coords[index] for index in v_is]
-            color = (255, 255, 0)
+            color = np.abs(obj_reader.vertices[v_is[0]])*45 + 25
+            # print(color)
             pg.draw.polygon(surf, color, triangle)
         
         screen.blit(surf, (0, 0))
         pg.display.flip()
-    
+
+def sort_faces(vertices, faces, camera, z_order):
+    for i, face in enumerate(faces):
+        camera_ray = vertices[face[0]] - camera[:3]
+        
+        distance = np.sqrt(camera_ray[0]**2 + camera_ray[1]**2 + camera_ray[2]**2)
+        z_order[i] = -distance
+
 def project_points(vertices, camera, theta=1e-16):
     output = np.empty((len(vertices), 2)) # Change to use persistent list for speed?
     
