@@ -3,6 +3,7 @@
 
 import pygame as pg
 import numpy as np
+from numba import njit
 from obj_reader import ObjReader
  
 
@@ -33,6 +34,9 @@ def main():
     z_order = np.empty(len(obj_reader.faces))
 
     while running:
+        
+        elapsed_time = clock.tick() * 0.001
+        
         surf.fill((50, 127, 200))
 
 
@@ -49,6 +53,10 @@ def main():
         sort_faces(obj_reader.vertices, obj_reader.faces, camera, z_order)
 
         for i in np.argsort(z_order):
+            
+            if z_order[i] == 9999:
+                break
+            
             v_is = obj_reader.faces[i]
             triangle = [pixel_coords[index] for index in v_is]
             color = np.abs(obj_reader.vertices[v_is[0]])*45 + 25
@@ -57,14 +65,32 @@ def main():
         
         screen.blit(surf, (0, 0))
         pg.display.flip()
+        pg.display.set_caption(str(round(1/(elapsed_time+1e-16), 2)) + ' fps : ' + str(camera) )
 
+@njit()
 def sort_faces(vertices, faces, camera, z_order):
     for i, face in enumerate(faces):
+        
+        # Use cross-product to get surface normal
+        vet1 = vertices[face[1]] - vertices[face[0]]
+        vet2 = vertices[face[2]] - vertices[face[0]]
+        
+        # backface culling with dot product between normal and camera ray
+        normal = np.cross(vet1, vet2)
+        normal /= np.sqrt(normal[0]**2 + normal[1]**2 + normal[2]**2)
+        
         camera_ray = vertices[face[0]] - camera[:3]
         
         distance = np.sqrt(camera_ray[0]**2 + camera_ray[1]**2 + camera_ray[2]**2)
-        z_order[i] = -distance
+        camera_ray /= distance
+        
+        if np.dot(normal, camera_ray) < 0:
+            z_order[i] = -distance
+        else:
+            z_order[i] = 9999
 
+
+@njit()
 def project_points(vertices, camera, theta=1e-16):
     output = np.empty((len(vertices), 2)) # Change to use persistent list for speed?
     
