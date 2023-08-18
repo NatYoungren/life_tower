@@ -26,19 +26,22 @@ def main():
     
 
     surf = pg.surface.Surface((SCREEN_W, SCREEN_H))
-    # for v in obj_reader.vertices:
-    #     print(v)
-    #     pg.draw.circle(screen, (255, 255, 255), (int(v[0]*SCREEN_W/4), int(v[1]*SCREEN_W/4)), 1)
+    
+    pixel_coords = np.empty((len(obj_reader.vertices), 2))
+    
+    z_order = np.empty(len(obj_reader.faces))
+    shade = np.empty(len(obj_reader.faces))
     
     camera = np.array([13, 0.5, 2, 3.3, 0])
-    z_order = np.empty(len(obj_reader.faces))
+    # light_dir = np.array([0, 1, 1])
 
     while running:
         
         elapsed_time = clock.tick() * 0.001
         
         surf.fill((50, 127, 200))
-
+        light_dir = np.array([np.sin(pg.time.get_ticks()/1000), 1, 1])
+        light_dir = light_dir/np.linalg.norm(light_dir)
 
         for event in pg.event.get():
             if event.type == pg.QUIT:
@@ -49,18 +52,17 @@ def main():
                 elif event.key == pg.K_SPACE:
                     print('space pressed')
         
-        pixel_coords = project_points(obj_reader.vertices, camera)
-        sort_faces(obj_reader.vertices, obj_reader.faces, camera, z_order)
+        project_points(obj_reader.vertices, camera, pixel_coords)
+        sort_faces(obj_reader.vertices, obj_reader.faces, camera, z_order, light_dir, shade)
 
         for i in np.argsort(z_order):
             
-            if z_order[i] == 9999:
+            if z_order[i] == np.inf:
                 break
             
             v_is = obj_reader.faces[i]
             triangle = [pixel_coords[index] for index in v_is]
-            color = np.abs(obj_reader.vertices[v_is[0]])*45 + 25
-            # print(color)
+            color = abs(shade[i]) * np.abs(obj_reader.vertices[v_is[0]]) * 45 + 25
             pg.draw.polygon(surf, color, triangle)
         
         screen.blit(surf, (0, 0))
@@ -68,7 +70,7 @@ def main():
         pg.display.set_caption(str(round(1/(elapsed_time+1e-16), 2)) + ' fps : ' + str(camera) )
 
 @njit()
-def sort_faces(vertices, faces, camera, z_order):
+def sort_faces(vertices, faces, camera, z_order, light_dir, shade):
     for i, face in enumerate(faces):
         
         # Use cross-product to get surface normal
@@ -86,13 +88,16 @@ def sort_faces(vertices, faces, camera, z_order):
         
         if np.dot(normal, camera_ray) < 0:
             z_order[i] = -distance
+            shade[i] = dot_3d(light_dir, normal)/2 + 0.5
         else:
-            z_order[i] = 9999
-
+            z_order[i] = np.inf
+            
+@njit()
+def dot_3d(a, b):
+    return a[0]*b[0] + a[1]*b[1] + a[2]*b[2]
 
 @njit()
-def project_points(vertices, camera, theta=1e-16):
-    output = np.empty((len(vertices), 2)) # Change to use persistent list for speed?
+def project_points(vertices, camera, pixel_coords, theta=1e-16):
     
     for i, v in enumerate(vertices):
         
@@ -128,9 +133,7 @@ def project_points(vertices, camera, theta=1e-16):
         
         y = SCREEN_H * v_angle / FOV_V + SCREEN_H / 2
         
-        output[i] = (x, y)
-        
-    return output
-        
+        pixel_coords[i] = (x, y)
+                
 if __name__ == '__main__':
     main()
