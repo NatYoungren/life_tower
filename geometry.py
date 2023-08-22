@@ -3,8 +3,9 @@ import numpy as np
 
 class Geometry_3D: # TODO: Add normals?
     def __init__(self, vertices=[], faces=[]):
-        self.vertices = np.array(vertices)
-        self.faces = np.array(faces)
+        
+        self.vertices = np.array(vertices).reshape(-1, 3)
+        self.faces = np.array(faces, dtype=int)
         
     def read(self, path):        
         vs = []
@@ -42,7 +43,7 @@ def generate_cube():
     return vertices, faces
     # for f1 in range(6):
 
-def generate_diamond(offset=(0, 0, 0), starting_v=0):
+def generate_diamond(offset=(0, 0, 0), scale=1, starting_v=0):
     #    1
     #
     # 2 3 4 5
@@ -61,9 +62,15 @@ def generate_diamond(offset=(0, 0, 0), starting_v=0):
                 [0.0, -0.5, 0.0],
                 [0.5, 0.0, 0.0],
                 [0.0, 0.0, -0.5]]
+
     vertices = np.array(vertices)
-    vertices += offset
     # print(vertices)
+
+    vertices *= scale
+    # print(vertices)
+    # print(scale)
+
+    vertices += offset
     
     faces = [[0, 1, 2],
              [0, 2, 3],
