@@ -1,8 +1,25 @@
 import numpy as np
+from numba import njit
+
+@njit()
+def fast_step(nmap, state, h, w):
+    nmap *= 0
+    for i in range(h):
+        for j in range(w):
+            if state[i, j]:
+                nmap[max(0, i - 1):i + 1 + 1, max(0, j - 1):j + 1 + 1] += 1
+                
+    for i in range(h):
+        for j in range(w):
+            # if state[i, j]:
+            #     state[i, j] = nmap[i, j] in [3, 4] # These numbers are increased by 1, as [i, j] is counted as a living neighbor
+            # else:
+            #     state[i, j] = nmap[i, j] in 3
+            state[i, j] = nmap[i, j] == 3 or state[i, j] and nmap[i, j] == 4
 
 
 class GameOfLife():
-    def __init__(self, width=10, height=10, radius=1, rules=None, initial_state=None, randomize_percent=0.5):
+    def __init__(self, width=10, height=10, radius=1, rules=None, initial_state=None, randomize_percent=0.3):
         self.width = width
         self.height = height
         
@@ -16,6 +33,7 @@ class GameOfLife():
         else:
             self.state = initial_state
         
+        self.neighbor_map = np.zeros((height, width), dtype=int)
         self.radius = radius
         
         self.rules = rules if rules is not None else {True: {2: True, 3: True}, False: {3: True}}
@@ -52,12 +70,14 @@ class GameOfLife():
                     neighbor_map[max(0, i - self.radius):i + self.radius + 1, max(0, j - self.radius):j + self.radius + 1] += 1
         return neighbor_map
     
-    def step(self):
+    def slow_step2(self):
         nm = self.gen_neighbor_map()
         for i in range(self.height):
             for j in range(self.width):
                 self.state[i, j] = self.rules[self.state[i, j]].get(nm[i, j] - self.state[i, j], False)
 
+    def step(self):
+        fast_step(self.neighbor_map, self.state, self.height, self.width)
     
     def __repr__(self):
         board = ''
