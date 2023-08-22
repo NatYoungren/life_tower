@@ -5,37 +5,41 @@ import pygame as pg
 import numpy as np
 from numba import njit
 from geometry import Geometry_3D
+
 import renderer
 from renderer import move_camera, sort_faces, project_points
 from geometry import generate_diamond
 
 
-SCREEN_W, SCREEN_H = 800, 600
-FOV_V = np.pi / 5
-FOV_H = FOV_V * SCREEN_W / SCREEN_H
-
-obj_file = 'assets/teapot.obj'
-obj = Geometry_3D(obj_file)
-# obj_reader.vertices = np.asarray([[1, 1, 1], [4, 2, 0], [1, 0.5, 3]])
-# obj_reader.faces = np.asarray([[0, 1, 2]])
-
-obj.vertices, obj.faces = generate_diamond()
-# print(np.mean(obj_reader.vertices, axis=0))
+# TODO: Add function to renderer for setting up these variables
+# NOTE: Consider using a class for this
+renderer.SCREEN_W, renderer.SCREEN_H = 800, 600
+renderer.FOV_V = np.pi / 5
+renderer.FOV_H = renderer.FOV_V * renderer.SCREEN_W / renderer.SCREEN_H
 
 
 def main():
+    obj = Geometry_3D()
+    obj.vertices, obj.faces = generate_diamond()
+
     pg.init()
     pg.display.set_caption('Tower of Life')
-    screen = pg.display.set_mode((SCREEN_W, SCREEN_H))
+    screen = pg.display.set_mode((renderer.SCREEN_W, renderer.SCREEN_H))
     running = True
     clock = pg.time.Clock()
 
 
-    surf = pg.surface.Surface((SCREEN_W, SCREEN_H))    
+    surf = pg.surface.Surface((renderer.SCREEN_W, renderer.SCREEN_H))    
 
+    # NOTE: Consider storing these in geometry class or renderer module
+    
+    # Used to store projected points
     pixel_coords = np.empty((len(obj.vertices), 2))
     
+    # Used to order faces by depth
     z_order = np.empty(len(obj.faces))
+    
+    # Used to store shading values, derived from angle between face normal and light direction
     shade = np.empty(len(obj.faces))
     
     camera = np.array([13, 0.5, 2, 3.3, 0])
@@ -43,9 +47,6 @@ def main():
     
     
     while running:
-        # print('start_pos', pg.mouse.get_pos())
-        # pg.mouse.set_pos((SCREEN_W/2, SCREEN_H/2))
-
         elapsed_time = clock.tick(60) * 0.001
         surf.fill((50, 127, 200)) 
         
@@ -70,7 +71,7 @@ def main():
 
         for i in np.argsort(z_order):
             
-            if z_order[i] == np.inf:
+            if z_order[i] == np.inf: # TODO: Improve this to avoid repetitive if statement?
                 break
             
             v_is = obj.faces[i]
