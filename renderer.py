@@ -85,7 +85,7 @@ def move_camera(camera, elapsed_time):
             pg.mouse.set_pos((SCREEN_W/2, SCREEN_H/2))
         camera[3] = (camera[3] + 10 * elapsed_time * np.clip((p_mouse[0])/SCREEN_W, -0.2, 0.2)) % (2*np.pi)
         camera[4] = camera[4] + 10 * elapsed_time * np.clip((p_mouse[1])/SCREEN_H, -0.2, 0.2)
-        camera[4] = np.clip(camera[4], -0.3, 0.3) #-np.pi/2, np.pi/2)
+        camera[4] = np.clip(camera[4], -np.pi/2, np.pi/2)
 
     pressed_keys = pg.key.get_pressed()
     
